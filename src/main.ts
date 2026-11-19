@@ -42,28 +42,30 @@ enableDirectorFromUrl();
 
 app.innerHTML = `
   <div class="shell">
-    <canvas id="game"></canvas>
-    <div class="hint hidden" id="hint"></div>
-    <div class="overlay" id="hud">
-      <div class="top-bar">
-        <div>
-          <div class="brand">Fold</div>
-          <div class="meta" id="levelMeta">1. Crease</div>
-          <div class="meta" id="sectionMeta"></div>
-        </div>
-        <div class="top-right">
-          <div class="meta" id="scrapMeta">✦ 0</div>
-          <div class="meta" id="foldMeta">Attempts 0</div>
+    <div class="stage">
+      <canvas id="game"></canvas>
+      <div class="hint hidden" id="hint"></div>
+      <div class="overlay" id="hud">
+        <div class="top-bar">
+          <div>
+            <div class="brand">Fold</div>
+            <div class="meta" id="levelMeta">1. Crease</div>
+            <div class="meta" id="sectionMeta"></div>
+          </div>
+          <div class="top-right">
+            <div class="meta" id="scrapMeta">✦ 0</div>
+            <div class="meta" id="foldMeta">Attempts 0</div>
+          </div>
         </div>
       </div>
-      <div class="bottom-bar">
-        <button class="btn secondary" id="btnUndo" type="button">Undo</button>
-        <button class="btn secondary" id="btnReset" type="button">Reset</button>
-        <button class="btn accent" id="btnGo" type="button">Go</button>
-        <button class="btn secondary hidden" id="btnFlutter" type="button">Flutter</button>
-        <button class="btn secondary" id="btnShop" type="button">Skins</button>
-        <button class="btn secondary" id="btnLevels" type="button">Levels</button>
-      </div>
+    </div>
+    <div class="bottom-bar" id="bottomBar">
+      <button class="btn secondary" id="btnUndo" type="button">Undo</button>
+      <button class="btn secondary" id="btnReset" type="button">Reset</button>
+      <button class="btn accent" id="btnGo" type="button">Go</button>
+      <button class="btn secondary hidden" id="btnFlutter" type="button">Flutter</button>
+      <button class="btn secondary" id="btnShop" type="button">Skins</button>
+      <button class="btn secondary" id="btnLevels" type="button">Levels</button>
     </div>
 
     <div class="screen" id="titleScreen">
@@ -181,9 +183,12 @@ game.setSkin(getSkin(save.skinId));
 game.start();
 refreshScraps();
 
+const shell = document.querySelector<HTMLDivElement>(".shell")!;
+
 function showTitle(show: boolean) {
   titleScreen.classList.toggle("hidden", !show);
   hud.style.visibility = show ? "hidden" : "visible";
+  shell.classList.toggle("title-mode", show);
 }
 
 function openLevels(open: boolean) {
@@ -318,7 +323,6 @@ document.querySelector("#btnNext")!.addEventListener("click", () => {
 });
 
 showTitle(true);
-hud.style.visibility = "hidden";
 renderLevels();
 renderShop();
 game.loadLevel(0);

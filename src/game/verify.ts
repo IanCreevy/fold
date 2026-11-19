@@ -96,9 +96,9 @@ export function simulateSolution(level: LevelDef): { ok: boolean; x: number; y: 
       if (dx < 50 && dy > -15 && dy < 50 && traveler.velocity.y > 0.35) {
         if (step - lastBounce > 12) {
           lastBounce = step;
-          const boost = Math.min(18, 7 + traveler.velocity.y * 1.55);
+          const boost = Math.min(24, 11 + traveler.velocity.y * 1.85);
           Body.setVelocity(traveler, {
-            x: Math.min(8, Math.max(traveler.velocity.x, 1.5) + 1.5),
+            x: Math.min(9.5, Math.max(traveler.velocity.x, 2.0) + 2.4),
             y: -boost,
           });
         }

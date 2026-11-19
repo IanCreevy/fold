@@ -132,9 +132,10 @@ export class FoldGame {
     // Only spring when landing / pressing into the pad
     if (vy < 0.4) return;
     this.lastBounceAt = now;
-    const boost = Math.min(18, 7 + vy * 1.55);
+    // Generous spring so a good setup clears — “missed by a fraction” should be rare
+    const boost = Math.min(24, 11 + vy * 1.85);
     Body.setVelocity(this.traveler, {
-      x: Math.min(7, Math.max(this.traveler.velocity.x, 1.2) + 1.4),
+      x: Math.min(9.5, Math.max(this.traveler.velocity.x, 2.0) + 2.4),
       y: -boost,
     });
   }
