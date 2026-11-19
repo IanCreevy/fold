@@ -93,6 +93,34 @@ body {
   background: linear-gradient(to bottom, rgba(244, 235, 224, 0.95), transparent);
 }
 
+.top-right {
+  text-align: right;
+}
+
+.sub-line {
+  font-size: 0.88rem !important;
+  opacity: 0.85;
+  margin-top: -0.75rem !important;
+}
+
+.section-head {
+  font-family: "Fraunces", serif;
+  font-size: 0.95rem;
+  margin: 0.75rem 0 0.35rem;
+  color: var(--crease);
+}
+
+.skin-card .price {
+  display: block;
+  margin-top: 0.35rem;
+  font-weight: 800;
+  color: var(--crease);
+}
+
+.btn.hidden {
+  display: none;
+}
+
 .bottom-bar {
   margin-top: auto;
   justify-content: center;
