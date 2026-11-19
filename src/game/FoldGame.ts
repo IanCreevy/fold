@@ -4,7 +4,7 @@ import { LEVELS, WORLD } from "./levels";
 import type { LevelDef, Skin, Vec } from "./types";
 import { sfxFold, sfxGo, sfxScrap, sfxWin } from "./audio";
 
-const { Engine, World, Bodies, Body, Events, Query } = Matter;
+const { Engine, World, Bodies, Body, Events } = Matter;
 
 type Snapshot = Vec[];
 
@@ -111,15 +111,16 @@ export class FoldGame {
 
     this.traveler = Bodies.circle(level.spawn.x, level.spawn.y, 18, {
       label: "traveler",
-      friction: 0.25,
-      frictionAir: 0.012,
-      restitution: 0.2,
-      density: 0.002,
-      sleepThreshold: 40,
+      friction: 0.05,
+      frictionAir: 0.004,
+      restitution: 0.15,
+      density: 0.0035,
+      sleepThreshold: 60,
     });
     Body.setStatic(this.traveler, true);
 
-    this.goal = Bodies.rectangle(level.goal.x, level.goal.y, 44, 56, {
+    // Tall finish plane: cross the door's X at any height to win.
+    this.goal = Bodies.rectangle(level.goal.x, WORLD.h / 2, 28, WORLD.h, {
       isStatic: true,
       isSensor: true,
       label: "goal",
@@ -180,8 +181,8 @@ export class FoldGame {
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const body = Bodies.rectangle(mid.x, mid.y + thickness * 0.35, len + 4, thickness, {
         isStatic: true,
-        friction: 0.85,
-        restitution: 0.05,
+        friction: 0.12,
+        restitution: 0.02,
         label: "terrain",
         chamfer: { radius: 4 },
       });
@@ -227,11 +228,28 @@ export class FoldGame {
   startRun() {
     if (this.running || this.won) return;
     Body.setStatic(this.traveler, false);
-    Body.setVelocity(this.traveler, { x: 1.6, y: -0.4 });
+    // Stronger push so a downhill fold can carry them up the far side.
+    Body.setVelocity(this.traveler, { x: 4.2, y: -0.8 });
     this.running = true;
     this.callbacks.onHint(null);
     sfxGo();
     this.emitHud();
+  }
+
+  /** Extra roll help on downward slopes — builds momentum for climbs. */
+  private applySlopeMomentum() {
+    if (!this.running || this.won || !this.traveler) return;
+    const x = this.traveler.position.x;
+    const yLeft = sampleTerrainY(this.points, x - 12);
+    const yRight = sampleTerrainY(this.points, x + 12);
+    const slope = (yRight - yLeft) / 24; // +slope = downhill to the right
+    if (slope > 0.08) {
+      const boost = Math.min(0.22, slope * 0.35);
+      Body.applyForce(this.traveler, this.traveler.position, { x: boost, y: 0 });
+    }
+    // Soft cap so they don't go rocket-speed
+    const vx = this.traveler.velocity.x;
+    if (vx > 14) Body.setVelocity(this.traveler, { x: 14, y: this.traveler.velocity.y });
   }
 
   undo() {
@@ -371,25 +389,17 @@ export class FoldGame {
       Engine.update(this.engine, dt);
 
       if (this.running && !this.won) {
-        // Fail-safe: if stuck nearly still for a while far from goal, allow retry feel
+        this.applySlopeMomentum();
+
         const speed = Math.hypot(this.traveler.velocity.x, this.traveler.velocity.y);
         if (speed < 0.15) this.settledFrames++;
         else this.settledFrames = 0;
 
-        // Soft win if overlapping goal sensor via query (sensor edge cases)
-        const hits = Query.region(this.engine.world.bodies, {
-          min: {
-            x: this.goal.bounds.min.x - 4,
-            y: this.goal.bounds.min.y - 4,
-          },
-          max: {
-            x: this.goal.bounds.max.x + 4,
-            y: this.goal.bounds.max.y + 4,
-          },
-        });
-        if (hits.includes(this.traveler)) this.finishLevel();
+        // Win by passing the door line — any height counts.
+        if (this.traveler.position.x >= this.level.goal.x) {
+          this.finishLevel();
+        }
 
-        // Respawn pose if they fell into the void
         if (this.traveler.position.y > WORLD.h - 20) {
           this.resetTravelerPose(true);
           this.callbacks.onHint("They slipped off the page. Fold again, then Go.");
@@ -438,10 +448,72 @@ export class FoldGame {
     c.fill();
 
     this.drawTerrain();
-    this.drawGoal();
+    this.drawGuideFolds();
+    this.drawFinishLine();
+    this.drawDoor();
     if (this.scrap) this.drawScrap();
     this.drawTraveler();
     this.drawFoldGuide();
+  }
+
+  private foldPreview(base: Vec[], creaseX: number, deltaY: number): Vec[] {
+    const radius = this.level.foldRadius;
+    return base.map((p) => {
+      const d = Math.abs(p.x - creaseX);
+      if (d >= radius) return { ...p };
+      const t = 1 - d / radius;
+      const influence = t * t * (3 - 2 * t);
+      return { x: p.x, y: p.y + deltaY * influence };
+    });
+  }
+
+  private drawGuideFolds() {
+    const guides = this.level.guideFolds;
+    if (!guides?.length || this.running || this.won) return;
+    const c = this.ctx;
+    for (const g of guides) {
+      const ghost = this.foldPreview(this.points, g.x, g.deltaY);
+      c.save();
+      c.strokeStyle = "rgba(196, 70, 55, 0.45)";
+      c.lineWidth = 3;
+      c.setLineDash([10, 10]);
+      c.lineJoin = "round";
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(ghost[0].x, ghost[0].y);
+      for (let i = 1; i < ghost.length; i++) c.lineTo(ghost[i].x, ghost[i].y);
+      c.stroke();
+      c.setLineDash([]);
+
+      // Small marker where to drag
+      const gy = sampleTerrainY(this.points, g.x);
+      c.fillStyle = "rgba(196, 70, 55, 0.35)";
+      c.beginPath();
+      c.arc(g.x, gy, 8, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = "rgba(196, 70, 55, 0.55)";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(g.x, gy - 8);
+      c.lineTo(g.x, gy + g.deltaY);
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  private drawFinishLine() {
+    const c = this.ctx;
+    const x = this.level.goal.x;
+    c.save();
+    c.strokeStyle = "rgba(61, 107, 79, 0.35)";
+    c.lineWidth = 3;
+    c.setLineDash([6, 8]);
+    c.beginPath();
+    c.moveTo(x, 120);
+    c.lineTo(x, WORLD.h - 40);
+    c.stroke();
+    c.setLineDash([]);
+    c.restore();
   }
 
   private drawTerrain() {
@@ -487,12 +559,14 @@ export class FoldGame {
     c.stroke();
   }
 
-  private drawGoal() {
+  private drawDoor() {
     const c = this.ctx;
-    const { x, y } = this.goal.position;
+    const x = this.level.goal.x;
+    const groundY = sampleTerrainY(this.points, x);
+    const y = Math.min(this.level.goal.y, groundY - 36);
     c.save();
     c.translate(x, y);
-    // Door frame
+    // Door sits on the finish line as a landmark — crossing the line anywhere wins.
     c.fillStyle = "#3d6b4f";
     c.strokeStyle = "#2c3a4a";
     c.lineWidth = 3;

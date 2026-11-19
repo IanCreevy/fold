@@ -6,10 +6,13 @@ export type LevelDef = {
   hint: string;
   terrain: Vec[];
   spawn: Vec;
+  /** Door landmark X; win by crossing this X at any height. */
   goal: Vec;
   scrap?: Vec;
   foldRadius: number;
   twoStarFolds: number;
+  /** Ghost crease targets shown on early tutorial levels. */
+  guideFolds?: Array<{ x: number; deltaY: number }>;
   cameraPadding?: number;
 };
 
