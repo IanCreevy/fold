@@ -2,7 +2,6 @@ import "./style.css";
 import { FoldGame } from "./game/FoldGame";
 import {
   buySkin,
-  campaignEstimate,
   getSkin,
   loadSave,
   ownsSkin,
@@ -71,7 +70,7 @@ app.innerHTML = `
     <div class="screen" id="titleScreen">
       <h1>Fold</h1>
       <p>Thirty training postcards — then Chapter 4, the long climb. Clear at your pace; the mix gets tougher as you go.</p>
-      <p class="sub-line">${campaignEstimate()} · ${playtime.monthsHint}</p>
+      <p class="sub-line">${playtime.levels} postcards · ~${playtime.casualHours}h casual · ${playtime.monthsHint}</p>
       <div class="actions">
         <button class="btn accent" id="btnPlay" type="button">Play</button>
         <button class="btn secondary" id="btnTitleShop" type="button">Skins</button>
