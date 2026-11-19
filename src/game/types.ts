@@ -21,6 +21,11 @@ export type LevelDef = {
   blockers?: Array<{ x: number; y: number; w: number; h: number }>;
   /** Ghost crease targets shown on early tutorial levels. */
   guideFolds?: Array<{ x: number; deltaY: number }>;
+  /**
+   * Proven crease list that restores a walkable path (not shown to players).
+   * Used to guarantee every postcard is doable.
+   */
+  solutionFolds?: Array<{ x: number; deltaY: number }>;
 };
 
 export type Skin = {
