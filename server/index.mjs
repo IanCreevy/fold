@@ -109,7 +109,7 @@ async function handleConfirm(req, res) {
   sendJson(res, 200, { skinId });
 }
 
-const PAGES: Record<string, string> = {
+const PAGES = {
   "/privacy": "/privacy.html",
   "/eula": "/eula.html",
   "/support": "/support.html",
