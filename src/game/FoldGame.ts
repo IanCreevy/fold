@@ -52,6 +52,7 @@ export class FoldGame {
   private ctx: CanvasRenderingContext2D;
   private engine = Engine.create({ gravity: { x: 0, y: 1.0 } });
   private terrainBodies: Matter.Body[] = [];
+  private blockerBodies: Matter.Body[] = [];
   private traveler!: Matter.Body;
   private goal!: Matter.Body;
   private scrap: Matter.Body | null = null;
@@ -162,11 +163,12 @@ export class FoldGame {
     this.flapsLeft = this.skin.flaps;
 
     this.rebuildTerrain();
+    this.rebuildBlockers();
 
     this.traveler = Bodies.circle(level.spawn.x, level.spawn.y, 18, {
       label: "traveler",
       friction: 0.08,
-      frictionAir: 0.01,
+      frictionAir: 0.012,
       restitution: 0.12,
       density: 0.0028,
       sleepThreshold: 50,
@@ -200,7 +202,25 @@ export class FoldGame {
     Engine.clear(this.engine);
     this.engine = Engine.create({ gravity: { x: 0, y: 1.0 } });
     this.terrainBodies = [];
+    this.blockerBodies = [];
     this.attachCollisions(this.engine);
+  }
+
+  private rebuildBlockers() {
+    if (this.blockerBodies.length) {
+      World.remove(this.engine.world, this.blockerBodies);
+      this.blockerBodies = [];
+    }
+    for (const b of this.level.blockers ?? []) {
+      const body = Bodies.rectangle(b.x, b.y, b.w, b.h, {
+        isStatic: true,
+        friction: 0.4,
+        restitution: 0.05,
+        label: "blocker",
+      });
+      this.blockerBodies.push(body);
+    }
+    if (this.blockerBodies.length) World.add(this.engine.world, this.blockerBodies);
   }
 
   private rebuildTerrain() {
@@ -490,12 +510,42 @@ export class FoldGame {
     c.clearRect(0, 0, WORLD.w, WORLD.h);
     this.drawSky();
     this.drawTerrain();
+    this.drawBlockers();
     this.drawGuideFolds();
     this.drawFinishLine();
     this.drawDoor();
     if (this.scrap) this.drawScrap();
     this.drawTraveler();
     this.drawFoldGuide();
+  }
+
+  private drawBlockers() {
+    if (!this.level.blockers?.length) return;
+    const c = this.ctx;
+    for (const b of this.level.blockers) {
+      c.save();
+      const grad = c.createLinearGradient(b.x - b.w / 2, b.y - b.h / 2, b.x + b.w / 2, b.y + b.h / 2);
+      grad.addColorStop(0, "#3a4555");
+      grad.addColorStop(0.5, "#1e2836");
+      grad.addColorStop(1, "#4a5568");
+      c.fillStyle = grad;
+      c.strokeStyle = "#0f141c";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.roundRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, 6);
+      c.fill();
+      c.stroke();
+      // Paper band marks so it reads as an ink wall, not a bug
+      c.strokeStyle = "rgba(255, 230, 200, 0.15)";
+      c.lineWidth = 2;
+      for (let y = b.y - b.h / 2 + 16; y < b.y + b.h / 2; y += 22) {
+        c.beginPath();
+        c.moveTo(b.x - b.w / 2 + 4, y);
+        c.lineTo(b.x + b.w / 2 - 4, y);
+        c.stroke();
+      }
+      c.restore();
+    }
   }
 
   private skyPalette(mood: SkyMood) {

@@ -17,6 +17,8 @@ export type LevelDef = {
   foldRadius: number;
   /** X-ranges of springy trampoline paper. */
   trampolineBands?: Array<{ x0: number; x1: number }>;
+  /** Non-foldable walls that stop the “raise left and fly” cheese. */
+  blockers?: Array<{ x: number; y: number; w: number; h: number }>;
   /** Ghost crease targets shown on early tutorial levels. */
   guideFolds?: Array<{ x: number; deltaY: number }>;
 };
