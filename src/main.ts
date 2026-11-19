@@ -55,13 +55,15 @@ app.innerHTML = `
             <div class="meta" id="foldMeta">Attempts 0</div>
           </div>
         </div>
+        <div class="flutter-dock hidden" id="flutterDock">
+          <button class="btn accent flutter-btn" id="btnFlutter" type="button">Flutter</button>
+        </div>
       </div>
     </div>
     <div class="bottom-bar" id="bottomBar">
       <button class="btn secondary" id="btnUndo" type="button">Undo</button>
       <button class="btn secondary" id="btnReset" type="button">Reset</button>
       <button class="btn accent" id="btnGo" type="button">Go</button>
-      <button class="btn secondary hidden" id="btnFlutter" type="button">Flutter</button>
       <button class="btn secondary" id="btnShop" type="button">Skins</button>
       <button class="btn secondary" id="btnLevels" type="button">Levels</button>
     </div>
@@ -135,6 +137,7 @@ const foldMeta = document.querySelector<HTMLDivElement>("#foldMeta")!;
 const btnUndo = document.querySelector<HTMLButtonElement>("#btnUndo")!;
 const btnGo = document.querySelector<HTMLButtonElement>("#btnGo")!;
 const btnFlutter = document.querySelector<HTMLButtonElement>("#btnFlutter")!;
+const flutterDock = document.querySelector<HTMLDivElement>("#flutterDock")!;
 const titleScreen = document.querySelector<HTMLDivElement>("#titleScreen")!;
 const levelPanel = document.querySelector<HTMLDivElement>("#levelPanel")!;
 const shopPanel = document.querySelector<HTMLDivElement>("#shopPanel")!;
@@ -147,7 +150,7 @@ const hud = document.querySelector<HTMLDivElement>("#hud")!;
 const shopSub = document.querySelector<HTMLParagraphElement>("#shopSub")!;
 
 const game = new FoldGame(canvas, {
-  onHud: ({ levelName, attempts, running, canUndo, flapsLeft, hasWings }) => {
+  onHud: ({ levelName, attempts, running, canUndo, flapsLeft, canFlutter }) => {
     levelMeta.textContent = levelName;
     const lvl = LEVELS[currentLevelIndex];
     sectionMeta.textContent = lvl ? SECTION_LABEL[lvl.section] : "";
@@ -155,9 +158,8 @@ const game = new FoldGame(canvas, {
     btnUndo.disabled = !canUndo;
     btnGo.disabled = running;
     btnGo.textContent = running ? "Running…" : "Go";
-    btnFlutter.classList.toggle("hidden", !hasWings);
-    btnFlutter.disabled = !running || flapsLeft <= 0;
-    btnFlutter.textContent = hasWings ? `Flutter (${flapsLeft})` : "Flutter";
+    flutterDock.classList.toggle("hidden", !canFlutter);
+    btnFlutter.textContent = `Flutter ${flapsLeft}`;
   },
   onWin: (stars, attempts) => {
     const level = LEVELS[currentLevelIndex];

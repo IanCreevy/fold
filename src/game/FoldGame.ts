@@ -17,6 +17,7 @@ export type FoldGameCallbacks = {
     canUndo: boolean;
     flapsLeft: number;
     hasWings: boolean;
+    canFlutter: boolean;
   }) => void;
   onWin: (stars: number, attempts: number, scraped: boolean) => void;
   onHint: (text: string | null) => void;
@@ -71,6 +72,7 @@ export class FoldGame {
   private pointerId: number | null = null;
   private skin: Skin = getSkin("moth");
   private flapsLeft = 0;
+  private canFlutterShown = false;
   private wingPhase = 0;
   private airborneFrames = 0;
   private raf = 0;
@@ -295,9 +297,12 @@ export class FoldGame {
     this.emitHud();
   }
 
+  private canFlutterNow() {
+    return this.running && !this.won && this.skin.hasWings && this.flapsLeft > 0 && this.airborneFrames >= 4;
+  }
+
   flutter() {
-    if (!this.running || this.won || !this.skin.hasWings || this.flapsLeft <= 0) return;
-    if (this.airborneFrames < 4) return;
+    if (!this.canFlutterNow()) return;
     this.flapsLeft -= 1;
     this.wingPhase = 1;
     Body.setVelocity(this.traveler, {
@@ -381,6 +386,7 @@ export class FoldGame {
 
   private emitHud() {
     if (!this.level) return;
+    this.canFlutterShown = this.canFlutterNow();
     this.callbacks.onHud({
       levelName: `${this.level.id}. ${this.level.name}`,
       attempts: this.attempts,
@@ -389,6 +395,7 @@ export class FoldGame {
       canUndo: !this.running && this.undoStack.length > 0,
       flapsLeft: this.flapsLeft,
       hasWings: this.skin.hasWings,
+      canFlutter: this.canFlutterShown,
     });
   }
 
@@ -471,6 +478,11 @@ export class FoldGame {
         const groundY = sampleTerrainY(this.points, this.traveler.position.x);
         const above = this.traveler.position.y < groundY - 34;
         this.airborneFrames = above ? this.airborneFrames + 1 : 0;
+        const canFlutter = this.canFlutterNow();
+        if (canFlutter !== this.canFlutterShown) {
+          this.canFlutterShown = canFlutter;
+          this.emitHud();
+        }
 
         if (this.traveler.position.x >= this.level.goal.x) this.finishLevel();
 

@@ -153,6 +153,26 @@ body {
   display: none;
 }
 
+.flutter-dock {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+}
+
+.flutter-dock.hidden {
+  display: none;
+}
+
+.flutter-btn {
+  min-width: 11rem;
+  min-height: 4.8rem;
+  padding: 1rem 1.7rem;
+  font-size: 1.55rem;
+  box-shadow: 0 16px 36px rgba(44, 58, 74, 0.34);
+}
+
 .director-bar {
   display: flex;
   align-items: center;
