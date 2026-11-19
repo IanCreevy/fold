@@ -1,0 +1,12 @@
+{
+  "appId": "com.navigatorofshame.fold",
+  "appName": "Fold",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#e8dcc8"
+  },
+  "ios": {
+    "backgroundColor": "#e8dcc8",
+    "contentInset": "automatic"
+  }
+}

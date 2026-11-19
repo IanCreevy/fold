@@ -11,6 +11,7 @@ import {
 } from "./game/cosmetics";
 import { estimatePlaytimeHours, LEVELS } from "./game/levels";
 import { unlockAudio } from "./game/audio";
+import { restorePurchases } from "./game/purchases";
 import { SECTION_LABEL, type SaveData } from "./game/types";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -21,17 +22,16 @@ let currentLevelIndex = 0;
 const playtime = estimatePlaytimeHours();
 
 const DIRECTOR_KEY = "fold.director.v1";
-const DIRECTOR_SECRET = "pulp-attic";
 
 function isDirector(): boolean {
-  return localStorage.getItem(DIRECTOR_KEY) === "1";
+  return import.meta.env.DEV && localStorage.getItem(DIRECTOR_KEY) === "1";
 }
 
 function enableDirectorFromUrl() {
+  if (!import.meta.env.DEV) return;
   const params = new URLSearchParams(window.location.search);
-  if (params.get("director") === DIRECTOR_SECRET) {
+  if (params.get("director") === "pulp-attic") {
     localStorage.setItem(DIRECTOR_KEY, "1");
-    // Clean the secret out of the address bar so it isn't shared accidentally
     params.delete("director");
     const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", next);
@@ -74,6 +74,12 @@ app.innerHTML = `
         <button class="btn accent" id="btnPlay" type="button">Play</button>
         <button class="btn secondary" id="btnTitleShop" type="button">Skins</button>
       </div>
+      <p class="legal">
+        <button type="button" id="btnRestoreTitle">Restore purchases</button>
+        <a href="privacy.html">Privacy</a>
+        <a href="eula.html">EULA</a>
+        <a href="support.html">Support</a>
+      </p>
     </div>
 
     <div class="panel hidden" id="levelPanel">
@@ -95,7 +101,15 @@ app.innerHTML = `
         <h2>Traveler skins</h2>
         <p class="sub" id="shopSub">The whole campaign is free. Premium skins are App Store and Google Play purchases.</p>
         <div class="skin-grid" id="skinGrid"></div>
-        <button class="btn secondary" id="btnCloseShop" type="button">Close</button>
+        <div class="actions">
+          <button class="btn secondary" id="btnRestore" type="button">Restore purchases</button>
+          <button class="btn secondary" id="btnCloseShop" type="button">Close</button>
+        </div>
+        <p class="legal">
+          <a href="privacy.html">Privacy</a>
+          <a href="eula.html">EULA</a>
+          <a href="support.html">Support</a>
+        </p>
       </div>
     </div>
 
@@ -288,6 +302,16 @@ document.querySelector("#btnShop")!.addEventListener("click", () => openShop(tru
 document.querySelector("#btnLevels")!.addEventListener("click", () => openLevels(true));
 document.querySelector("#btnCloseLevels")!.addEventListener("click", () => openLevels(false));
 document.querySelector("#btnCloseShop")!.addEventListener("click", () => openShop(false));
+async function onRestore() {
+  openShop(true);
+  shopSub.textContent = await restorePurchases();
+}
+document.querySelector("#btnRestore")!.addEventListener("click", () => {
+  void onRestore();
+});
+document.querySelector("#btnRestoreTitle")!.addEventListener("click", () => {
+  void onRestore();
+});
 document.querySelector("#btnJump")?.addEventListener("click", () => {
   if (!isDirector()) return;
   const input = document.querySelector<HTMLInputElement>("#jumpLevel");

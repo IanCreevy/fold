@@ -1,0 +1,40 @@
+:root {
+  color: #2c3a4a;
+  background: #e8dcc8;
+  font-family: Georgia, "Iowan Old Style", serif;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+}
+.kicker {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: "Nunito", system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #c45c26;
+}
+h1 {
+  font-size: 2.4rem;
+  line-height: 1;
+  margin: 0.2rem 0 0.6rem;
+}
+h2 {
+  font-size: 1.25rem;
+  margin: 1.6rem 0 0.4rem;
+}
+p, li {
+  font-family: "Nunito", system-ui, sans-serif;
+  line-height: 1.5;
+}
+a {
+  color: #c45c26;
+}
+.updated, .links {
+  color: #5a6b7a;
+}

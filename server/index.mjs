@@ -109,9 +109,15 @@ async function handleConfirm(req, res) {
   sendJson(res, 200, { skinId });
 }
 
+const PAGES: Record<string, string> = {
+  "/privacy": "/privacy.html",
+  "/eula": "/eula.html",
+  "/support": "/support.html",
+};
+
 async function serveStatic(req, res) {
   const url = new URL(req.url || "/", "http://localhost");
-  let path = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "");
+  let path = PAGES[url.pathname] || normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "");
   if (path === "/" || path === "\\") path = "/index.html";
   const file = join(ROOT, path);
   if (!file.startsWith(ROOT)) {
