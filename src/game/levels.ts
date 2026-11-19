@@ -17,37 +17,39 @@ export const LEVELS: LevelDef[] = [
   {
     id: 1,
     name: "Crease",
-    hint: "Drag up near the faint red line to fold a gentle ramp, then press Go.",
+    hint: "Drag UP at the red mark to raise the left side — then Go and roll downhill past the door.",
     terrain: groundLine(920, [
-      { x: 180, y: 920 },
+      { x: 140, y: 920 },
+      { x: 200, y: 920 },
       { x: 280, y: 920 },
       { x: 380, y: 920 },
       { x: 500, y: 920 },
     ]),
-    spawn: { x: 110, y: 880 },
+    // Sit on the downhill face of the guided crease (peak ~160).
+    spawn: { x: 210, y: 880 },
     goal: { x: 580, y: 880 },
-    foldRadius: 160,
+    foldRadius: 170,
     twoStarFolds: 2,
-    // One gentle up-fold (negative Y = fold paper upward on screen… wait:
-    // In our fold gesture, dragging UP means pointer y decreases, so deltaY is negative → terrain rises.
-    guideFolds: [{ x: 300, deltaY: -120 }],
+    // Raise the LEFT so the path slopes down toward the door (not a mid-map bump).
+    guideFolds: [{ x: 150, deltaY: -150 }],
   },
   {
     id: 2,
     name: "Too Steep",
-    hint: "Match the faint red crest — not too high — then Go.",
+    hint: "Same idea: raise the left with a gentle crease. Too tall and they bounce — match the red guide.",
     terrain: groundLine(940, [
-      { x: 180, y: 940 },
+      { x: 140, y: 940 },
+      { x: 200, y: 940 },
       { x: 300, y: 940 },
       { x: 420, y: 940 },
       { x: 540, y: 940 },
     ]),
-    spawn: { x: 110, y: 900 },
+    spawn: { x: 220, y: 900 },
     goal: { x: 590, y: 900 },
-    scrap: { x: 360, y: 720 },
-    foldRadius: 150,
+    scrap: { x: 400, y: 780 },
+    foldRadius: 160,
     twoStarFolds: 2,
-    guideFolds: [{ x: 320, deltaY: -100 }],
+    guideFolds: [{ x: 155, deltaY: -120 }],
   },
   {
     id: 3,

@@ -49,6 +49,8 @@ export class FoldGame {
   private scrap: Matter.Body | null = null;
   private level!: LevelDef;
   private points: Vec[] = [];
+  /** Immutable copy of the level's starting terrain — guides stay anchored here. */
+  private originalPoints: Vec[] = [];
   private undoStack: Snapshot[] = [];
   private folds = 0;
   private running = false;
@@ -99,6 +101,7 @@ export class FoldGame {
     this.clearWorld();
     this.level = level;
     this.points = clonePts(level.terrain);
+    this.originalPoints = clonePts(level.terrain);
     this.undoStack = [];
     this.folds = 0;
     this.running = false;
@@ -111,11 +114,11 @@ export class FoldGame {
 
     this.traveler = Bodies.circle(level.spawn.x, level.spawn.y, 18, {
       label: "traveler",
-      friction: 0.05,
-      frictionAir: 0.004,
-      restitution: 0.15,
-      density: 0.0035,
-      sleepThreshold: 60,
+      friction: 0.08,
+      frictionAir: 0.008,
+      restitution: 0.12,
+      density: 0.0028,
+      sleepThreshold: 50,
     });
     Body.setStatic(this.traveler, true);
 
@@ -181,7 +184,7 @@ export class FoldGame {
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const body = Bodies.rectangle(mid.x, mid.y + thickness * 0.35, len + 4, thickness, {
         isStatic: true,
-        friction: 0.12,
+        friction: 0.22,
         restitution: 0.02,
         label: "terrain",
         chamfer: { radius: 4 },
@@ -228,28 +231,26 @@ export class FoldGame {
   startRun() {
     if (this.running || this.won) return;
     Body.setStatic(this.traveler, false);
-    // Stronger push so a downhill fold can carry them up the far side.
-    Body.setVelocity(this.traveler, { x: 4.2, y: -0.8 });
+    Body.setVelocity(this.traveler, { x: 2.1, y: -0.3 });
     this.running = true;
     this.callbacks.onHint(null);
     sfxGo();
     this.emitHud();
   }
 
-  /** Extra roll help on downward slopes — builds momentum for climbs. */
+  /** Light assist on downhill slopes so a good crease can still climb a little. */
   private applySlopeMomentum() {
     if (!this.running || this.won || !this.traveler) return;
     const x = this.traveler.position.x;
     const yLeft = sampleTerrainY(this.points, x - 12);
     const yRight = sampleTerrainY(this.points, x + 12);
     const slope = (yRight - yLeft) / 24; // +slope = downhill to the right
-    if (slope > 0.08) {
-      const boost = Math.min(0.22, slope * 0.35);
+    if (slope > 0.12) {
+      const boost = Math.min(0.06, slope * 0.12);
       Body.applyForce(this.traveler, this.traveler.position, { x: boost, y: 0 });
     }
-    // Soft cap so they don't go rocket-speed
     const vx = this.traveler.velocity.x;
-    if (vx > 14) Body.setVelocity(this.traveler, { x: 14, y: this.traveler.velocity.y });
+    if (vx > 6.5) Body.setVelocity(this.traveler, { x: 6.5, y: this.traveler.velocity.y });
   }
 
   undo() {
@@ -471,10 +472,11 @@ export class FoldGame {
     const guides = this.level.guideFolds;
     if (!guides?.length || this.running || this.won) return;
     const c = this.ctx;
+    // Always preview from the ORIGINAL flat terrain so the guide never slides with your fold.
     for (const g of guides) {
-      const ghost = this.foldPreview(this.points, g.x, g.deltaY);
+      const ghost = this.foldPreview(this.originalPoints, g.x, g.deltaY);
       c.save();
-      c.strokeStyle = "rgba(196, 70, 55, 0.45)";
+      c.strokeStyle = "rgba(196, 70, 55, 0.5)";
       c.lineWidth = 3;
       c.setLineDash([10, 10]);
       c.lineJoin = "round";
@@ -485,18 +487,27 @@ export class FoldGame {
       c.stroke();
       c.setLineDash([]);
 
-      // Small marker where to drag
-      const gy = sampleTerrainY(this.points, g.x);
-      c.fillStyle = "rgba(196, 70, 55, 0.35)";
+      // Marker on the original paper — where to drag — not on the live fold.
+      const gy = sampleTerrainY(this.originalPoints, g.x);
+      const targetY = gy + g.deltaY;
+      c.fillStyle = "rgba(196, 70, 55, 0.4)";
       c.beginPath();
-      c.arc(g.x, gy, 8, 0, Math.PI * 2);
+      c.arc(g.x, gy, 9, 0, Math.PI * 2);
       c.fill();
-      c.strokeStyle = "rgba(196, 70, 55, 0.55)";
+      c.strokeStyle = "rgba(196, 70, 55, 0.65)";
       c.lineWidth = 2;
       c.beginPath();
-      c.moveTo(g.x, gy - 8);
-      c.lineTo(g.x, gy + g.deltaY);
+      c.moveTo(g.x, gy);
+      c.lineTo(g.x, targetY);
       c.stroke();
+      // Arrow head toward the target crest
+      c.beginPath();
+      c.moveTo(g.x, targetY);
+      c.lineTo(g.x - 7, targetY + 12);
+      c.lineTo(g.x + 7, targetY + 12);
+      c.closePath();
+      c.fillStyle = "rgba(196, 70, 55, 0.55)";
+      c.fill();
       c.restore();
     }
   }
