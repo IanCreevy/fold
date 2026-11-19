@@ -47,8 +47,8 @@ export type SaveData = {
 export type GameMode = "title" | "levels" | "playing" | "won" | "shop";
 
 export const SECTION_LABEL: Record<LevelSection, string> = {
-  ramps: "Chapter 1 — Ramps",
-  bridges: "Chapter 2 — Bridges",
-  trampolines: "Chapter 3 — Trampolines",
-  mixed: "Chapter 4 — Endless Mix",
+  ramps: "Training · Ramps",
+  bridges: "Training · Bridges",
+  trampolines: "Training · Trampolines",
+  mixed: "Chapter 4 — The Real Game",
 };

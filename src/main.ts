@@ -21,6 +21,25 @@ let save: SaveData = loadSave();
 let currentLevelIndex = 0;
 const playtime = estimatePlaytimeHours();
 
+const DIRECTOR_KEY = "fold.director.v1";
+const DIRECTOR_SECRET = "pulp-attic";
+
+function isDirector(): boolean {
+  return localStorage.getItem(DIRECTOR_KEY) === "1";
+}
+
+function enableDirectorFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("director") === DIRECTOR_SECRET) {
+    localStorage.setItem(DIRECTOR_KEY, "1");
+    // Clean the secret out of the address bar so it isn't shared accidentally
+    params.delete("director");
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", next);
+  }
+}
+enableDirectorFromUrl();
+
 app.innerHTML = `
   <div class="shell">
     <canvas id="game"></canvas>
@@ -49,8 +68,8 @@ app.innerHTML = `
 
     <div class="screen" id="titleScreen">
       <h1>Fold</h1>
-      <p>Pinch the world into shape. Ramps first, then bridges, then trampolines — then a long mix with no end in sight.</p>
-      <p class="sub-line">${campaignEstimate()}</p>
+      <p>Thirty training postcards — then Chapter 4, the long climb. Clear at your pace; the mix gets tougher as you go.</p>
+      <p class="sub-line">${campaignEstimate()} · ${playtime.monthsHint}</p>
       <div class="actions">
         <button class="btn accent" id="btnPlay" type="button">Play</button>
         <button class="btn secondary" id="btnTitleShop" type="button">Skins</button>
@@ -60,7 +79,12 @@ app.innerHTML = `
     <div class="panel hidden" id="levelPanel">
       <div class="panel-card">
         <h2>Postcards</h2>
-        <p class="sub">${playtime.levels} levels · casual ~${playtime.casualHours}h · skilled ~${playtime.skilledHours}h. Stars = attempts (1 = ★★★).</p>
+        <p class="sub">${playtime.levels} levels · casual ~${playtime.casualHours}h · ${playtime.monthsHint}. Stars = attempts (1 = ★★★).</p>
+        <div id="directorBar" class="director-bar hidden">
+          <span class="director-badge">Director</span>
+          <input id="jumpLevel" type="number" min="1" max="${LEVELS.length}" placeholder="Level #" />
+          <button class="btn accent" id="btnJump" type="button">Jump</button>
+        </div>
         <div class="level-list" id="levelList"></div>
         <button class="btn secondary" id="btnCloseLevels" type="button">Close</button>
       </div>
@@ -182,17 +206,23 @@ function startLevel(index: number) {
 }
 
 function renderLevels() {
+  const director = isDirector();
+  const directorBar = document.querySelector<HTMLDivElement>("#directorBar")!;
+  directorBar.classList.toggle("hidden", !director);
+
   let lastSection = "";
   const chunks: string[] = [];
-  // Show unlocked + a few locked ahead; cap list DOM for the 230 mix
-  const maxShow = Math.min(LEVELS.length, Math.max(save.unlocked + 8, 40));
+  // Normal players: unlocked window. Director: jump anywhere + wider list around jump target.
+  const maxShow = director
+    ? Math.min(LEVELS.length, Math.max(save.unlocked + 40, 80))
+    : Math.min(LEVELS.length, Math.max(save.unlocked + 8, 40));
   for (let i = 0; i < maxShow; i++) {
     const lvl = LEVELS[i];
     if (lvl.section !== lastSection) {
       lastSection = lvl.section;
       chunks.push(`<div class="section-head">${SECTION_LABEL[lvl.section]}</div>`);
     }
-    const locked = lvl.id > save.unlocked;
+    const locked = !director && lvl.id > save.unlocked;
     const stars = save.stars[lvl.id] ?? 0;
     const starTxt = stars ? "★".repeat(stars) : "—";
     chunks.push(`<button class="level-btn" data-i="${i}" ${locked ? "disabled" : ""} type="button">
@@ -202,13 +232,20 @@ function renderLevels() {
   }
   if (maxShow < LEVELS.length) {
     chunks.push(
-      `<p class="sub" style="margin-top:0.5rem">${LEVELS.length - maxShow} more mix postcards unlock as you go…</p>`,
+      `<p class="sub" style="margin-top:0.5rem">${LEVELS.length - maxShow} more postcards unlock as you go${director ? " — or Jump by number" : ""}…</p>`,
     );
   }
   levelList.innerHTML = chunks.join("");
   levelList.querySelectorAll<HTMLButtonElement>(".level-btn").forEach((btn) => {
     btn.addEventListener("click", () => startLevel(Number(btn.dataset.i)));
   });
+}
+
+function jumpToLevelNumber(raw: string) {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return;
+  const idx = Math.max(1, Math.min(LEVELS.length, Math.floor(n))) - 1;
+  startLevel(idx);
 }
 
 function renderShop() {
@@ -256,6 +293,18 @@ document.querySelector("#btnShop")!.addEventListener("click", () => openShop(tru
 document.querySelector("#btnLevels")!.addEventListener("click", () => openLevels(true));
 document.querySelector("#btnCloseLevels")!.addEventListener("click", () => openLevels(false));
 document.querySelector("#btnCloseShop")!.addEventListener("click", () => openShop(false));
+document.querySelector("#btnJump")?.addEventListener("click", () => {
+  if (!isDirector()) return;
+  const input = document.querySelector<HTMLInputElement>("#jumpLevel");
+  jumpToLevelNumber(input?.value ?? "");
+});
+document.querySelector("#jumpLevel")?.addEventListener("keydown", (e) => {
+  if (!isDirector()) return;
+  if ((e as KeyboardEvent).key === "Enter") {
+    const input = e.target as HTMLInputElement;
+    jumpToLevelNumber(input.value);
+  }
+});
 document.querySelector("#btnUndo")!.addEventListener("click", () => game.undo());
 document.querySelector("#btnReset")!.addEventListener("click", () => game.resetLevel());
 document.querySelector("#btnGo")!.addEventListener("click", () => {

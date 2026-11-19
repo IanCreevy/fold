@@ -161,6 +161,7 @@ export function recordClear(
 /** Rough playtime copy for the title/levels UI. */
 export function campaignEstimate(): string {
   const n = LEVELS.length;
-  const hoursCasual = Math.round((n * 2.5) / 60);
-  return `${n} postcards · ~${hoursCasual}+ hours for a casual clear · mix chapter keeps growing`;
+  const hoursCasual = Math.round((n * 3.2) / 60);
+  const months = Math.max(1, Math.round((hoursCasual * 60) / (15 * 30)));
+  return `${n} postcards · ~${hoursCasual}h casual (~${months} mo at 15 min/day) · training then the long climb`;
 }

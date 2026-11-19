@@ -77,6 +77,7 @@ export class FoldGame {
   private callbacks: FoldGameCallbacks;
   private clouds: Array<{ x: number; y: number; w: number; speed: number }> = [];
   private rain: Array<{ x: number; y: number; v: number }> = [];
+  private lastBounceAt = 0;
 
   constructor(canvas: HTMLCanvasElement, callbacks: FoldGameCallbacks) {
     this.canvas = canvas;
@@ -108,11 +109,32 @@ export class FoldGame {
   private attachCollisions(engine: Matter.Engine) {
     Events.on(engine, "collisionStart", (e) => {
       for (const pair of e.pairs) {
-        const bodies = [pair.bodyA, pair.bodyB];
-        if (this.scrap && bodies.includes(this.traveler) && bodies.includes(this.scrap)) {
-          this.collectScrap();
+        const a = pair.bodyA;
+        const b = pair.bodyB;
+        if (this.scrap && this.traveler && (a === this.traveler || b === this.traveler)) {
+          const other = a === this.traveler ? b : a;
+          if (other === this.scrap) this.collectScrap();
         }
+        this.tryTrampolineBounce(a, b);
       }
+    });
+  }
+
+  /** Matter restitution on static bodies is unreliable — punch an impulse instead. */
+  private tryTrampolineBounce(a: Matter.Body, b: Matter.Body) {
+    if (!this.traveler || !this.running || this.won) return;
+    const other = a === this.traveler ? b : b === this.traveler ? a : null;
+    if (!other || other.label !== "trampoline") return;
+    const now = performance.now();
+    if (now - this.lastBounceAt < 180) return;
+    const vy = this.traveler.velocity.y;
+    // Only spring when landing / pressing into the pad
+    if (vy < 0.4) return;
+    this.lastBounceAt = now;
+    const boost = Math.min(18, 7 + vy * 1.55);
+    Body.setVelocity(this.traveler, {
+      x: Math.min(7, Math.max(this.traveler.velocity.x, 1.2) + 1.4),
+      y: -boost,
     });
   }
 

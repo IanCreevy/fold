@@ -121,6 +121,41 @@ body {
   display: none;
 }
 
+.director-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.director-bar.hidden {
+  display: none;
+}
+
+.director-badge {
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--crease);
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+}
+
+.director-bar input {
+  flex: 1;
+  min-width: 5rem;
+  border: 2px solid rgba(44, 58, 74, 0.18);
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-weight: 700;
+  background: var(--paper-deep);
+  color: var(--ink);
+}
+
 .bottom-bar {
   margin-top: auto;
   justify-content: center;
