@@ -3,7 +3,6 @@ import { FoldGame } from "./game/FoldGame";
 import {
   formatPrice,
   getSkin,
-  grantSkin,
   loadSave,
   ownsSkin,
   recordClear,
@@ -94,7 +93,7 @@ app.innerHTML = `
     <div class="panel hidden" id="shopPanel">
       <div class="panel-card">
         <h2>Traveler skins</h2>
-        <p class="sub" id="shopSub">The whole campaign is free. Premium looks are real purchases — not scraps.</p>
+        <p class="sub" id="shopSub">The whole campaign is free. Premium skins are App Store and Google Play purchases.</p>
         <div class="skin-grid" id="skinGrid"></div>
         <button class="btn secondary" id="btnCloseShop" type="button">Close</button>
       </div>
@@ -246,7 +245,7 @@ function jumpToLevelNumber(raw: string) {
 
 function renderShop() {
   shopSub.textContent =
-    "The campaign stays free. Pulp Moth and Paper Fox are included. Everything else is a card purchase.";
+    "The campaign stays free. Pulp Moth and Paper Fox are included. Other skins are bought with Apple or Google billing in the store apps.";
   skinGrid.innerHTML = SKINS.map((skin) => {
     const active = skin.id === save.skinId;
     const owned = ownsSkin(save, skin.id);
@@ -265,7 +264,7 @@ function renderShop() {
   });
 }
 
-async function selectSkin(id: string) {
+function selectSkin(id: string) {
   if (ownsSkin(save, id)) {
     save = { ...save, skinId: id };
     writeSave(save);
@@ -273,50 +272,8 @@ async function selectSkin(id: string) {
     renderShop();
     return;
   }
-  shopSub.textContent = `Opening checkout for ${getSkin(id).name}…`;
-  try {
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ skinId: id }),
-    });
-    const data = (await res.json()) as { url?: string; message?: string; error?: string };
-    if (!res.ok || !data.url) {
-      shopSub.textContent =
-        data.error === "payments_not_configured"
-          ? "Card checkout isn’t connected yet. Skins stay locked until Stripe is set up."
-          : data.message || "Checkout didn’t start. Try again.";
-      return;
-    }
-    window.location.href = data.url;
-  } catch {
-    shopSub.textContent = "Checkout didn’t start. Try again.";
-  }
-}
-
-async function confirmCheckout() {
-  const params = new URLSearchParams(window.location.search);
-  const sessionId = params.get("session_id");
-  if (params.get("checkout") !== "success" || !sessionId) return;
-  params.delete("checkout");
-  params.delete("session_id");
-  const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
-  window.history.replaceState({}, "", next);
-  try {
-    const res = await fetch("/api/confirm", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId }),
-    });
-    const data = (await res.json()) as { skinId?: string };
-    if (!res.ok || !data.skinId) return;
-    save = grantSkin(save, data.skinId);
-    game.setSkin(getSkin(save.skinId));
-    openShop(true);
-    shopSub.textContent = `${getSkin(data.skinId).name} is yours. The campaign was already free.`;
-  } catch {
-    /* leave the shop closed if confirm fails */
-  }
+  const skin = getSkin(id);
+  shopSub.textContent = `${skin.name} is ${formatPrice(skin.priceCents)} in the App Store and Google Play apps. This web build doesn’t charge.`;
 }
 
 document.querySelector("#btnPlay")!.addEventListener("click", () => {
@@ -359,4 +316,3 @@ showTitle(true);
 renderLevels();
 renderShop();
 game.loadLevel(0);
-void confirmCheckout();
