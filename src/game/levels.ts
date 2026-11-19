@@ -211,8 +211,8 @@ function makeMixed(id: number, index: number): LevelDef {
   const sky = skyFor("mixed", index);
   const hint =
     d < 0.4
-      ? "One tall left ramp won’t cut it — plan the whole path."
-      : "Chapter 4 bite: walls, gaps, and springs. Cheese ramps fail here.";
+      ? "You only fold the paper, then press Go — the moth rolls on its own. One tall left ramp usually isn’t enough."
+      : "Fold a full path, then Go. The moth isn’t steerable — walls and gaps punish a single big ramp.";
 
   if (kind === "doubleGap") {
     // Two canyons — a single ballistic arc from a left ramp can't clear both.
@@ -275,7 +275,7 @@ function makeMixed(id: number, index: number): LevelDef {
     return {
       id,
       name: `Mix ${index + 1} · Ink Wall`,
-      hint: "The tall wall eats high launches — fold a low bridge or bounce under it.",
+      hint: "Fold a low bridge under the dark wall (or into the coral bounce). You can’t steer mid-air — only crease, then Go.",
       section: "mixed",
       sky,
       terrain,
@@ -323,7 +323,7 @@ function makeMixed(id: number, index: number): LevelDef {
     return {
       id,
       name: `Mix ${index + 1} · Trapmouth`,
-      hint: "Don’t raise the spawn shelf — you’ll fall in. Island hop, then beat the reverse lip.",
+      hint: "Don’t fold the starting ledge straight up — that dumps the moth into the pit. Crease a path onto the middle island, then flatten the uphill bump before the door. Fold only — then Go.",
       section: "mixed",
       sky,
       terrain,
@@ -369,7 +369,7 @@ function makeMixed(id: number, index: number): LevelDef {
     return {
       id,
       name: `Mix ${index + 1} · Triple`,
-      hint: "Three gaps. One ramp will not save you.",
+      hint: "Three gaps in a row. Fold bridges or bounce pads across each — one left-side ramp won’t carry the moth all the way.",
       section: "mixed",
       sky,
       terrain,
@@ -394,7 +394,7 @@ function makeMixed(id: number, index: number): LevelDef {
   return {
     id,
     name: `Mix ${index + 1} · Spring Gate`,
-    hint: "Bounce the coral — the wall stops sky cheese.",
+    hint: "Fold so the moth rolls into the coral trampoline. The dark wall blocks flying over — bounce under/through, then Go.",
     section: "mixed",
     sky,
     terrain: [
