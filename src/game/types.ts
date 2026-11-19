@@ -36,8 +36,8 @@ export type Skin = {
   accent: string;
   ear: string;
   wing?: string;
-  /** Soft currency cost; 0 = free starter. */
-  cost: number;
+  /** Real price in US cents. 0 = free starter skin. */
+  priceCents: number;
   /** Can flutter while airborne to cross gaps. */
   hasWings: boolean;
   flaps: number;

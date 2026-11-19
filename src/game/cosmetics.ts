@@ -10,7 +10,7 @@ export const SKINS: Skin[] = [
     accent: "#f7e8c9",
     ear: "#e8a87c",
     wing: "#c9a0dc",
-    cost: 0,
+    priceCents: 0,
     hasWings: false,
     flaps: 0,
   },
@@ -22,19 +22,43 @@ export const SKINS: Skin[] = [
     accent: "#fff0dd",
     ear: "#2c3a4a",
     wing: "#f0a070",
-    cost: 0,
+    priceCents: 0,
+    hasWings: false,
+    flaps: 0,
+  },
+  {
+    id: "moss",
+    name: "Moss Kit",
+    blurb: "Leafy look for rainy postcards. Looks only.",
+    body: "#3d6b4f",
+    accent: "#e5f2c9",
+    ear: "#c45c26",
+    wing: "#8fbc8f",
+    priceCents: 99,
     hasWings: false,
     flaps: 0,
   },
   {
     id: "glider",
     name: "Dawn Glider",
-    blurb: "Buyable wings — flutter from height to cross canyons.",
+    blurb: "Paid wings — flutter from height to cross canyons.",
     body: "#3d6b9a",
     accent: "#ffe6a8",
     ear: "#f0c14a",
     wing: "#7eb8e8",
-    cost: 40,
+    priceCents: 199,
+    hasWings: true,
+    flaps: 3,
+  },
+  {
+    id: "sunset",
+    name: "Sunset Kite",
+    blurb: "Coral wings that catch every downhill.",
+    body: "#c45c6a",
+    accent: "#ffe0c2",
+    ear: "#ffb347",
+    wing: "#ff8a65",
+    priceCents: 299,
     hasWings: true,
     flaps: 3,
   },
@@ -46,33 +70,9 @@ export const SKINS: Skin[] = [
     accent: "#9fd3ff",
     ear: "#6ec6ff",
     wing: "#4a6fa5",
-    cost: 80,
+    priceCents: 399,
     hasWings: true,
     flaps: 4,
-  },
-  {
-    id: "sunset",
-    name: "Sunset Kite",
-    blurb: "Coral wings that catch every downhill.",
-    body: "#c45c6a",
-    accent: "#ffe0c2",
-    ear: "#ffb347",
-    wing: "#ff8a65",
-    cost: 60,
-    hasWings: true,
-    flaps: 3,
-  },
-  {
-    id: "moss",
-    name: "Moss Kit",
-    blurb: "Leafy traveler for rainy postcards.",
-    body: "#3d6b4f",
-    accent: "#e5f2c9",
-    ear: "#c45c26",
-    wing: "#8fbc8f",
-    cost: 25,
-    hasWings: false,
-    flaps: 0,
   },
 ];
 
@@ -115,19 +115,25 @@ export function getSkin(id: string): Skin {
 }
 
 export function ownsSkin(save: SaveData, id: string) {
-  return save.ownedSkins.includes(id) || getSkin(id).cost === 0;
+  return save.ownedSkins.includes(id) || getSkin(id).priceCents === 0;
 }
 
-export function buySkin(save: SaveData, id: string): SaveData | null {
+export function formatPrice(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** Unlock after a verified card payment. Never spends in-game scraps. */
+export function grantSkin(save: SaveData, id: string): SaveData {
   const skin = getSkin(id);
-  if (ownsSkin(save, id)) return save;
-  if (save.scraps < skin.cost) return null;
-  const next: SaveData = {
-    ...save,
-    scraps: save.scraps - skin.cost,
-    ownedSkins: [...save.ownedSkins, id],
-    skinId: id,
-  };
+  if (skin.priceCents === 0) {
+    const next = { ...save, skinId: id };
+    writeSave(next);
+    return next;
+  }
+  const owned = save.ownedSkins.includes(id)
+    ? save.ownedSkins
+    : [...save.ownedSkins, id];
+  const next: SaveData = { ...save, ownedSkins: owned, skinId: id };
   writeSave(next);
   return next;
 }
@@ -146,13 +152,11 @@ export function recordClear(
 ): SaveData {
   const prev = save.stars[levelId] ?? 0;
   const nextStars = { ...save.stars, [levelId]: Math.max(prev, stars) };
-  const scrapGain = 8 + stars * 4;
   const unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, levelId + 1));
   const next: SaveData = {
     ...save,
     stars: nextStars,
     unlocked,
-    scraps: save.scraps + scrapGain,
   };
   writeSave(next);
   return next;

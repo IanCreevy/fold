@@ -1,8 +1,9 @@
 import "./style.css";
 import { FoldGame } from "./game/FoldGame";
 import {
-  buySkin,
+  formatPrice,
   getSkin,
+  grantSkin,
   loadSave,
   ownsSkin,
   recordClear,
@@ -52,7 +53,6 @@ app.innerHTML = `
             <div class="meta" id="sectionMeta"></div>
           </div>
           <div class="top-right">
-            <div class="meta" id="scrapMeta">✦ 0</div>
             <div class="meta" id="foldMeta">Attempts 0</div>
           </div>
         </div>
@@ -94,7 +94,7 @@ app.innerHTML = `
     <div class="panel hidden" id="shopPanel">
       <div class="panel-card">
         <h2>Traveler skins</h2>
-        <p class="sub" id="shopSub">Earn ✦ scraps by clearing levels. Winged skins can Flutter mid-air.</p>
+        <p class="sub" id="shopSub">The whole campaign is free. Premium looks are real purchases — not scraps.</p>
         <div class="skin-grid" id="skinGrid"></div>
         <button class="btn secondary" id="btnCloseShop" type="button">Close</button>
       </div>
@@ -119,7 +119,6 @@ const hintEl = document.querySelector<HTMLDivElement>("#hint")!;
 const levelMeta = document.querySelector<HTMLDivElement>("#levelMeta")!;
 const sectionMeta = document.querySelector<HTMLDivElement>("#sectionMeta")!;
 const foldMeta = document.querySelector<HTMLDivElement>("#foldMeta")!;
-const scrapMeta = document.querySelector<HTMLDivElement>("#scrapMeta")!;
 const btnUndo = document.querySelector<HTMLButtonElement>("#btnUndo")!;
 const btnGo = document.querySelector<HTMLButtonElement>("#btnGo")!;
 const btnFlutter = document.querySelector<HTMLButtonElement>("#btnFlutter")!;
@@ -133,11 +132,6 @@ const winStars = document.querySelector<HTMLDivElement>("#winStars")!;
 const winBlurb = document.querySelector<HTMLParagraphElement>("#winBlurb")!;
 const hud = document.querySelector<HTMLDivElement>("#hud")!;
 const shopSub = document.querySelector<HTMLParagraphElement>("#shopSub")!;
-
-function refreshScraps() {
-  scrapMeta.textContent = `✦ ${save.scraps}`;
-  shopSub.textContent = `You have ✦ ${save.scraps}. Winged skins Flutter mid-air to cross canyons.`;
-}
 
 const game = new FoldGame(canvas, {
   onHud: ({ levelName, attempts, running, canUndo, flapsLeft, hasWings }) => {
@@ -155,10 +149,9 @@ const game = new FoldGame(canvas, {
   onWin: (stars, attempts) => {
     const level = LEVELS[currentLevelIndex];
     save = recordClear(save, level.id, stars);
-    refreshScraps();
     winStars.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
     if (stars === 3) {
-      winBlurb.textContent = `First-try clear in ${attempts} attempt. +✦ scraps earned.`;
+      winBlurb.textContent = `First-try clear in ${attempts} attempt.`;
     } else if (stars === 2) {
       winBlurb.textContent = `Cleared in ${attempts} attempts. Beat it in 1 try for ★★★.`;
     } else {
@@ -180,7 +173,6 @@ const game = new FoldGame(canvas, {
 
 game.setSkin(getSkin(save.skinId));
 game.start();
-refreshScraps();
 
 const shell = document.querySelector<HTMLDivElement>(".shell")!;
 
@@ -253,11 +245,12 @@ function jumpToLevelNumber(raw: string) {
 }
 
 function renderShop() {
-  refreshScraps();
+  shopSub.textContent =
+    "The campaign stays free. Pulp Moth and Paper Fox are included. Everything else is a card purchase.";
   skinGrid.innerHTML = SKINS.map((skin) => {
     const active = skin.id === save.skinId;
     const owned = ownsSkin(save, skin.id);
-    const price = skin.cost === 0 ? "Free" : owned ? "Owned" : `✦ ${skin.cost}`;
+    const price = skin.priceCents === 0 ? "Free" : owned ? "Owned" : formatPrice(skin.priceCents);
     const wing = skin.hasWings ? ` · ${skin.flaps} flaps` : "";
     return `<button class="skin-card ${active ? "active" : ""}" data-id="${skin.id}" type="button">
       <strong>${skin.name}</strong>
@@ -267,22 +260,63 @@ function renderShop() {
   }).join("");
   skinGrid.querySelectorAll<HTMLButtonElement>(".skin-card").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const id = btn.dataset.id!;
-      if (!ownsSkin(save, id)) {
-        const next = buySkin(save, id);
-        if (!next) {
-          shopSub.textContent = `Need more scraps for that skin (✦ ${getSkin(id).cost}). Clear levels to earn ✦.`;
-          return;
-        }
-        save = next;
-      } else {
-        save = { ...save, skinId: id };
-        writeSave(save);
-      }
-      game.setSkin(getSkin(save.skinId));
-      renderShop();
+      void selectSkin(btn.dataset.id!);
     });
   });
+}
+
+async function selectSkin(id: string) {
+  if (ownsSkin(save, id)) {
+    save = { ...save, skinId: id };
+    writeSave(save);
+    game.setSkin(getSkin(id));
+    renderShop();
+    return;
+  }
+  shopSub.textContent = `Opening checkout for ${getSkin(id).name}…`;
+  try {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ skinId: id }),
+    });
+    const data = (await res.json()) as { url?: string; message?: string; error?: string };
+    if (!res.ok || !data.url) {
+      shopSub.textContent =
+        data.error === "payments_not_configured"
+          ? "Card checkout isn’t connected yet. Skins stay locked until Stripe is set up."
+          : data.message || "Checkout didn’t start. Try again.";
+      return;
+    }
+    window.location.href = data.url;
+  } catch {
+    shopSub.textContent = "Checkout didn’t start. Try again.";
+  }
+}
+
+async function confirmCheckout() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+  if (params.get("checkout") !== "success" || !sessionId) return;
+  params.delete("checkout");
+  params.delete("session_id");
+  const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
+  window.history.replaceState({}, "", next);
+  try {
+    const res = await fetch("/api/confirm", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    });
+    const data = (await res.json()) as { skinId?: string };
+    if (!res.ok || !data.skinId) return;
+    save = grantSkin(save, data.skinId);
+    game.setSkin(getSkin(save.skinId));
+    openShop(true);
+    shopSub.textContent = `${getSkin(data.skinId).name} is yours. The campaign was already free.`;
+  } catch {
+    /* leave the shop closed if confirm fails */
+  }
 }
 
 document.querySelector("#btnPlay")!.addEventListener("click", () => {
@@ -325,3 +359,4 @@ showTitle(true);
 renderLevels();
 renderShop();
 game.loadLevel(0);
+void confirmCheckout();
