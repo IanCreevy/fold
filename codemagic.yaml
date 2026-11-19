@@ -43,6 +43,7 @@ workflows:
           if [ ! -d ios/App ]; then
             npx cap add ios
           fi
+          npx capacitor-assets generate --ios --iconBackgroundColor "#7eb6d6" --splashBackgroundColor "#d7ecf8"
           npx cap sync ios
       - name: Sign and build IPA
         script: |
