@@ -18,8 +18,7 @@ const SKIN_PRODUCT: Record<string, string> = {
   stormwing: "skin_stormwing",
 };
 
-const NOT_READY =
-  "This test build can't sell skins yet. Pulp Moth and Paper Fox are the ones you can use.";
+const NOT_READY = "The store didn’t connect. Try the skin again in a moment.";
 
 let configured: Promise<boolean> | null = null;
 
