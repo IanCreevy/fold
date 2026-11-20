@@ -11,7 +11,7 @@ import {
 } from "./game/cosmetics";
 import { estimatePlaytimeHours, LEVELS } from "./game/levels";
 import { unlockAudio } from "./game/audio";
-import { restorePurchases } from "./game/purchases";
+import { purchaseSkin, restorePurchases, storeBillingReady, syncOwnedSkins } from "./game/purchases";
 import { SECTION_LABEL, type SaveData } from "./game/types";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -260,8 +260,9 @@ function jumpToLevelNumber(raw: string) {
 }
 
 function renderShop() {
-  shopSub.textContent =
-    "The campaign stays free. Pulp Moth and Paper Fox are included. Other skins are bought with Apple or Google billing in the store apps.";
+  shopSub.textContent = storeBillingReady()
+    ? "The campaign stays free. Pulp Moth and Paper Fox are included. Other skins are bought from the store."
+    : "The campaign stays free. Pulp Moth and Paper Fox are included. Other skins are bought with Apple or Google billing in the store apps.";
   skinGrid.innerHTML = SKINS.map((skin) => {
     const active = skin.id === save.skinId;
     const owned = ownsSkin(save, skin.id);
@@ -280,7 +281,7 @@ function renderShop() {
   });
 }
 
-function selectSkin(id: string) {
+async function selectSkin(id: string) {
   if (ownsSkin(save, id)) {
     save = { ...save, skinId: id };
     writeSave(save);
@@ -288,8 +289,12 @@ function selectSkin(id: string) {
     renderShop();
     return;
   }
-  const skin = getSkin(id);
-  shopSub.textContent = `${skin.name} is ${formatPrice(skin.priceCents)} in the App Store and Google Play apps. This web build doesn’t charge.`;
+  shopSub.textContent = "Opening the store…";
+  const result = await purchaseSkin(save, id);
+  save = result.save;
+  if (ownsSkin(save, id)) game.setSkin(getSkin(save.skinId));
+  renderShop();
+  shopSub.textContent = result.message;
 }
 
 document.querySelector("#btnPlay")!.addEventListener("click", () => {
@@ -306,7 +311,11 @@ document.querySelector("#btnCloseLevels")!.addEventListener("click", () => openL
 document.querySelector("#btnCloseShop")!.addEventListener("click", () => openShop(false));
 async function onRestore() {
   openShop(true);
-  shopSub.textContent = await restorePurchases();
+  const result = await restorePurchases(save);
+  save = result.save;
+  game.setSkin(getSkin(save.skinId));
+  renderShop();
+  shopSub.textContent = result.message;
 }
 document.querySelector("#btnRestore")!.addEventListener("click", () => {
   void onRestore();
@@ -342,3 +351,7 @@ showTitle(true);
 renderLevels();
 renderShop();
 game.loadLevel(0);
+void syncOwnedSkins(save).then((next) => {
+  save = next;
+  game.setSkin(getSkin(save.skinId));
+});
