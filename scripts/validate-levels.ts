@@ -1,6 +1,8 @@
-import { LEVELS } from "../src/game/levels";
+import { writeFileSync } from "node:fs";
+import { buildCampaign } from "../src/game/levelGen";
 import { geometricProof, simulateSolution } from "../src/game/verify";
 
+const LEVELS = buildCampaign();
 const physFail: number[] = [];
 const bothFail: number[] = [];
 
@@ -20,4 +22,5 @@ if (bothFail.length || physFail.length) {
   process.exit(1);
 }
 
+writeFileSync(new URL("../src/game/campaign.json", import.meta.url), JSON.stringify(LEVELS));
 console.log("OK — every level has a physics-verified solution (bridge restore and/or bounce).");

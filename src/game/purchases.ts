@@ -19,7 +19,7 @@ const SKIN_PRODUCT: Record<string, string> = {
 };
 
 const NOT_READY =
-  "Store billing is not connected in this build yet. Skins can be bought once the store app is linked to RevenueCat.";
+  "This test build can't sell skins yet. Pulp Moth and Paper Fox are the ones you can use.";
 
 let configured: Promise<boolean> | null = null;
 
