@@ -3,4 +3,4 @@
  * Leave a key empty until that store app exists in RevenueCat.
  */
 export const REVENUECAT_ANDROID_KEY = "goog_oRJHCobqwvVFfOidmqXnDQFlYhS";
-export const REVENUECAT_IOS_KEY = "";
+export const REVENUECAT_IOS_KEY = "appl_wHjHykXsbSamsCGfMyfyUVPysro";
