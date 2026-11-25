@@ -28,13 +28,17 @@ workflows:
     name: Fold iOS TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 60
+    integrations:
+      app_store_connect: SarcNav
     environment:
       node: 22
-      xcode: latest
+      # Apple requires the iOS 26 SDK for App Store Connect uploads.
+      xcode: 26.4
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.navigatorofshame.fold
+      vars:
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+        BUNDLE_ID: com.navigatorofshame.fold
     scripts:
       - name: Install and build web
         script: |
@@ -47,12 +51,14 @@ workflows:
           fi
           npx capacitor-assets generate --ios --iconBackgroundColor "#7eb6d6" --splashBackgroundColor "#d7ecf8"
           npx cap sync ios
-      - name: Sign and build IPA
+      - name: Create a new distribution certificate and profile
+        script: bash scripts/codemagic-ios-signing.sh
+      - name: Build IPA
         script: |
-          xcode-project use-profiles
-          xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+          xcode-project build-ipa \
+            --workspace ios/App/App.xcworkspace \
+            --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    # Turn on App Store Connect publishing in the Codemagic UI when the
-    # organization migration is finished and the Fold app record exists.
+    # Publishing stays off until the Fold app record exists in App Store Connect.
