@@ -8,10 +8,17 @@ workflows:
       node: 22
       android_signing:
         - fold
+      groups:
+        - fold_analytics
     scripts:
       - name: Install, build web, sync Android
         script: |
           npm ci
+          if [ -z "${VITE_MIXPANEL_TOKEN:-}" ]; then
+            echo "WARNING: VITE_MIXPANEL_TOKEN missing — Mixpanel stays off in this build"
+          else
+            echo "Mixpanel token present"
+          fi
           npm run build
           npx cap sync android
       - name: Android App Bundle
@@ -35,14 +42,22 @@ workflows:
       # Apple requires the iOS 26 SDK for App Store Connect uploads.
       xcode: 26.4
       cocoapods: default
+      groups:
+        - fold_analytics
       vars:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
         BUNDLE_ID: com.navigatorofshame.fold
+        APP_STORE_APPLE_ID: 6838986014
     scripts:
       - name: Install and build web
         script: |
           npm ci
+          if [ -z "${VITE_MIXPANEL_TOKEN:-}" ]; then
+            echo "WARNING: VITE_MIXPANEL_TOKEN missing — Mixpanel stays off in this build"
+          else
+            echo "Mixpanel token present"
+          fi
           npm run build
       - name: Add iOS project on the Mac builder if it is not in git
         script: |
@@ -57,6 +72,23 @@ workflows:
           else
             /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
           fi
+      - name: Set iOS build number
+        script: |
+          cd ios/App
+          LATEST=0
+          set +e
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null | tr -d '[:space:]')
+          set -e
+          if ! [[ "$LATEST" =~ ^[0-9]+$ ]]; then
+            echo "TestFlight lookup failed, value='$LATEST'"
+            LATEST=1
+          fi
+          BUILD_NUM=$((LATEST + 1))
+          if [ -n "${PROJECT_BUILD_NUMBER:-}" ] && [[ "$PROJECT_BUILD_NUMBER" =~ ^[0-9]+$ ]] && [ "$PROJECT_BUILD_NUMBER" -gt "$BUILD_NUM" ]; then
+            BUILD_NUM=$PROJECT_BUILD_NUMBER
+          fi
+          echo "Latest TestFlight build: $LATEST -> CFBundleVersion $BUILD_NUM"
+          agvtool new-version -all "$BUILD_NUM"
       - name: Create a new distribution certificate and profile
         script: bash scripts/codemagic-ios-signing.sh
       - name: Build IPA

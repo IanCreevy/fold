@@ -12,6 +12,7 @@ import {
 import { estimatePlaytimeHours, LEVELS } from "./game/levels";
 import { unlockAudio } from "./game/audio";
 import { purchaseSkin, restorePurchases, storeBillingReady, syncOwnedSkins } from "./game/purchases";
+import { Events, initAnalytics, trackEvent } from "./game/analytics";
 import { SECTION_LABEL, type SaveData } from "./game/types";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -38,6 +39,8 @@ function enableDirectorFromUrl() {
   }
 }
 enableDirectorFromUrl();
+initAnalytics();
+trackEvent(Events.APP_OPENED);
 
 app.innerHTML = `
   <div class="shell">
@@ -174,6 +177,12 @@ const game = new FoldGame(canvas, {
     }
     winPanel.classList.remove("hidden");
     renderLevels();
+    trackEvent(Events.LEVEL_CLEARED, {
+      level: level.id,
+      section: level.section,
+      stars,
+      attempts,
+    });
   },
   onHint: (text) => {
     if (!text) {
@@ -214,6 +223,10 @@ function startLevel(index: number) {
   showTitle(false);
   game.setSkin(getSkin(save.skinId));
   game.loadLevel(index);
+  const level = LEVELS[index];
+  if (level) {
+    trackEvent(Events.LEVEL_STARTED, { level: level.id, section: level.section });
+  }
 }
 
 function renderLevels() {
@@ -287,12 +300,21 @@ async function selectSkin(id: string) {
     writeSave(save);
     game.setSkin(getSkin(id));
     renderShop();
+    trackEvent(Events.SKIN_SELECTED, { skin: id });
     return;
   }
   shopSub.textContent = "Opening the store…";
+  trackEvent(Events.PURCHASE_TAPPED, { skin: id });
   const result = await purchaseSkin(save, id);
   save = result.save;
-  if (ownsSkin(save, id)) game.setSkin(getSkin(save.skinId));
+  if (ownsSkin(save, id)) {
+    game.setSkin(getSkin(save.skinId));
+    trackEvent(Events.PURCHASE_SUCCEEDED, { skin: id });
+  } else if (/cancel/i.test(result.message)) {
+    trackEvent(Events.PURCHASE_CANCELLED, { skin: id });
+  } else {
+    trackEvent(Events.PURCHASE_FAILED, { skin: id });
+  }
   renderShop();
   shopSub.textContent = result.message;
 }
@@ -311,7 +333,9 @@ document.querySelector("#btnCloseLevels")!.addEventListener("click", () => openL
 document.querySelector("#btnCloseShop")!.addEventListener("click", () => openShop(false));
 async function onRestore() {
   openShop(true);
+  trackEvent(Events.RESTORE_TAPPED);
   const result = await restorePurchases(save);
+  trackEvent(Events.RESTORE_FINISHED);
   save = result.save;
   game.setSkin(getSkin(save.skinId));
   renderShop();
